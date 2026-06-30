@@ -5,7 +5,7 @@ const config = require('./src/config');
 const { WPClient } = require('./src/client');
 const { success, error, info, warn } = require('./src/utils');
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 
 program
   .name('xingliu-wp')
@@ -14,11 +14,21 @@ program
 
 // === Helper: get client from active profile ===
 function getClient() {
-  const { token, site, profile } = config.getToken();
-  if (!site) {
+  let token, site, profile;
+  const activeProfile = config.getActiveProfile();
+  if (!activeProfile) {
     error('未选择站点。请先 login 登录或 profiles use 切换站点');
     process.exit(1);
   }
+  site = activeProfile.site;
+  profile = activeProfile.name;
+  // Public profile (no auth needed)
+  if (activeProfile.public) {
+    return { client: new WPClient(site), profile };
+  }
+  // Auth profile
+  const tokenInfo = config.getToken();
+  token = tokenInfo.token;
   if (!token) {
     warn(`站点 "${profile}" Token 已过期，请重新 login`);
     process.exit(1);
@@ -214,14 +224,22 @@ program.command('check')
 
     try {
       const client = new WPClient(p.site, token);
-      const res = await client.get('/wp/v2/users/me');
+      // Cookie auth doesn't support /users/me, fallback to /posts
+      let res = await client.get('/wp/v2/users/me');
       if (res.status === 200) {
         success(`站点 "${p.name}" 连接正常 (用户: ${res.data.name})`);
+        return;
+      }
+      // Fallback: try fetching posts
+      res = await client.get('/wp/v2/posts', { per_page: 1 });
+      if (res.status === 200) {
+        const total = res.headers['x-wp-total'] || '?';
+        success(`站点 "${p.name}" 连接正常 (Cookie 认证，共 ${total} 篇文章)`);
       } else {
         error(`认证失败 (HTTP ${res.status})`);
       }
     } catch {
-      error('连接失败，请重新登录');
+      error('连接失败，请重新登录或更新 Cookie');
     }
   });
 
@@ -234,6 +252,7 @@ require('./src/commands/comments').register(program, getClient);
 require('./src/commands/users').register(program, getClient);
 require('./src/commands/settings').register(program, getClient);
 require('./src/commands/search').register(program, getClient);
+require('./src/commands/download').register(program, getClient);
 require('./src/commands/profiles').register(program);
 
 // === Parse ===
