@@ -127,6 +127,49 @@ program.command('app-auth')
     }
   });
 
+// === Cookie Login (browser automation) ===
+program.command('cookie-login')
+  .description('通过浏览器自动化登录（适用于自定义登录页的站点）')
+  .requiredOption('-s, --site <url>', '站点地址')
+  .requiredOption('-u, --user <user>', '用户名')
+  .requiredOption('-p, --password <password>', '密码')
+  .option('-n, --name <name>', '配置名称')
+  .action(async (opts) => {
+    const site = opts.site.replace(/\/+$/, '');
+    const profileName = opts.name || new URL(site).hostname.replace(/^www\./, '');
+
+    try {
+      const { cookieLogin } = require('./src/cookie-auth');
+      const success = await cookieLogin(site, opts.user, opts.password);
+      if (!success) {
+        error('浏览器登录失败');
+        process.exit(1);
+      }
+
+      // Load cookies and save as token
+      const { getCookieHeader } = require('./src/cookie-auth');
+      const cookieHeader = getCookieHeader();
+      if (!cookieHeader) {
+        error('未能提取 Cookie');
+        process.exit(1);
+      }
+
+      const token = `Cookie: ${cookieHeader}`;
+      const expiry = Date.now() + 14 * 24 * 60 * 60 * 1000; // 14 days
+
+      config.saveProfile({ name: profileName, site, token, tokenExpiry: expiry });
+      config.setActiveProfile(profileName);
+      config.setToken(profileName, token, expiry);
+
+      success(`Cookie 登录成功！配置名称: ${profileName}`);
+      info(`站点: ${site}`);
+      info(`Cookie 有效期约 14 天，过期后需重新登录`);
+    } catch (e) {
+      error(`Cookie 登录失败: ${e.message}`);
+      info('请确认: 1) 账号密码正确 2) 站点无需人机验证 3) 已安装 playwright (npm i playwright && npx playwright install chromium)');
+    }
+  });
+
 // === Logout ===
 program.command('logout')
   .description('清除当前站点 Token')

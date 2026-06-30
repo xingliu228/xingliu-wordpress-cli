@@ -14,9 +14,11 @@ function request(method, fullUrl, opts = {}) {
     };
 
     if (opts.token) {
-      // Support both JWT Bearer and Application Password Basic
+      // Support JWT Bearer, Application Password Basic, and Cookie auth
       if (opts.token.startsWith('Basic ')) {
         headers['Authorization'] = opts.token;
+      } else if (opts.token.startsWith('Cookie:')) {
+        headers['Cookie'] = opts.token.replace(/^Cookie:\s*/, '');
       } else {
         headers['Authorization'] = `Bearer ${opts.token}`;
       }
