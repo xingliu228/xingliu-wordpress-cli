@@ -1,0 +1,31 @@
+{
+  "name": "xingliu-wordpress-cli",
+  "version": "1.0.0",
+  "description": "WordPress REST API 通用命令行工具，支持多站点管理",
+  "main": "cli.js",
+  "bin": {
+    "xingliu-wp": "cli.js"
+  },
+  "keywords": [
+    "wordpress",
+    "cli",
+    "rest-api",
+    "wp-cli",
+    "headless-cms",
+    "wordpress-cli",
+    "jwt"
+  ],
+  "author": "xingliu228",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xingliu228/xingliu-wordpress-cli.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^12.1.0"
+  }
+}
